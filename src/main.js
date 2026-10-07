@@ -7,36 +7,40 @@ const sb = createClient(
 )
 const $ = (id) => document.getElementById(id)
 const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟\uFE0E' }
-const SEAT_NAMES = ['Team A · P1 (White)', 'Team B · P1 (Black)', 'Team A · P2 (White)', 'Team B · P2 (Black)']
+const SEAT_NAMES = ['Team A · P1 (White)', 'Team B · P1 (White)', 'Team A · P2 (Black)', 'Team B · P2 (Black)']
 
 const game = new Chess()
 let room = null, mySeat = null, ply = 0, status = 'waiting'
 let selected = null, hints = [], lastMove = null, players = []
 
-// ---------- Auth + lobby ----------
-// Wrap it in an async initialization function
-async function init() {
-  try {
-    await sb.auth.signInAnonymously();
-  } catch (err) {
-    console.error("Auth error:", err);
+// Helper to ensure user is authenticated anonymously before interacting
+async function ensureAuth() {
+  const { data: { session } } = await sb.auth.getSession()
+  if (!session) {
+    const { error } = await sb.auth.signInAnonymously()
+    if (error) console.error("Auth error:", error)
   }
 }
 
-init();
-
-// rest of your code...
+// ---------- Auth + lobby ----------
 $('create').onclick = async () => {
+  await ensureAuth()
   const code = $('code').value.trim() || Math.random().toString(36).slice(2, 7)
   const { error } = await sb.rpc('create_room', { p_code: code })
   if (error) return alert(error.message)
   $('code').value = code
   enter(code)
 }
-$('join').onclick = () => enter($('code').value.trim())
+
+$('join').onclick = async () => {
+  await ensureAuth()
+  enter($('code').value.trim())
+}
 
 async function enter(code) {
   if (!code) return alert('Enter a room code')
+  await ensureAuth()
+  
   const { data, error } = await sb.rpc('join_room', {
     p_code: code, p_name: $('name').value.trim() || 'Player'
   })
@@ -45,8 +49,7 @@ async function enter(code) {
   const { data: r } = await sb.from('rooms').select('*').eq('code', code).single()
   room = r
   $('lobby').hidden = true
-  $('game').hidden = false
-  $('roomcode').textContent = 'Room code: ' + code + ' (share it with the other 3 players)'
+  $('game').hidden = false$('roomcode').textContent = 'Room code: ' + code + ' (share it with the other 3 players)'
   await loadPlayers()
   sync(r)
   subscribe()
