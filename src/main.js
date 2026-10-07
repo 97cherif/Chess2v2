@@ -14,8 +14,18 @@ let room = null, mySeat = null, ply = 0, status = 'waiting'
 let selected = null, hints = [], lastMove = null, players = []
 
 // ---------- Auth + lobby ----------
-await sb.auth.signInAnonymously()
+// Wrap it in an async initialization function
+async function init() {
+  try {
+    await sb.auth.signInAnonymously();
+  } catch (err) {
+    console.error("Auth error:", err);
+  }
+}
 
+init();
+
+// rest of your code...
 $('create').onclick = async () => {
   const code = $('code').value.trim() || Math.random().toString(36).slice(2, 7)
   const { error } = await sb.rpc('create_room', { p_code: code })
