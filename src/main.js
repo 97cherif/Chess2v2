@@ -13,7 +13,6 @@ const game = new Chess()
 let room = null, mySeat = null, ply = 0, status = 'waiting'
 let selected = null, hints = [], lastMove = null, players = []
 
-// Helper to ensure user is authenticated anonymously before interacting
 async function ensureAuth() {
   const { data: { session } } = await sb.auth.getSession()
   if (!session) {
@@ -22,7 +21,6 @@ async function ensureAuth() {
   }
 }
 
-// ---------- Auth + lobby ----------
 $('create').onclick = async () => {
   await ensureAuth()
   const code = $('code').value.trim() || Math.random().toString(36).slice(2, 7)
@@ -60,7 +58,6 @@ async function loadPlayers() {
   players = data || []
 }
 
-// ---------- Realtime ----------
 function subscribe() {
   sb.channel('room-' + room.id)
     .on('postgres_changes',
@@ -85,7 +82,6 @@ function sync(r) {
 
 const myTurn = () => status === 'playing' && mySeat === ply % 4
 
-// ---------- Rendering ----------
 function render() {
   const el = $('board')
   el.innerHTML = ''
@@ -133,7 +129,6 @@ function gameOverText() {
   return 'Game over — draw'
 }
 
-// ---------- Moves ----------
 function onSquare(sq) {
   if (!myTurn()) return
   if (selected && hints.includes(sq)) return playMove(selected, sq)
@@ -149,7 +144,7 @@ function onSquare(sq) {
 }
 
 async function playMove(from, to) {
-  const m = game.move({ from, to, promotion: 'q' }) // auto-queen
+  const m = game.move({ from, to, promotion: 'q' })
   if (!m) return
   const fen = game.fen()
   const over = game.isGameOver()
